@@ -8,6 +8,8 @@ class Connection:
 		#if self.verbose:
 		print "connecting to",self.host,self.verbose
 
+#test mesg
+
 if __name__ == "__main__":
 	c = Connection('fire')
 
