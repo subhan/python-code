@@ -28,8 +28,9 @@ class Response:
 		self.data = ""
 
 	def send(self,f):
+		self.headers['Content-Length'] = len(self.data)
 		f.write("%s:%s\r\n" %(self.http_version,self.status))
-		header_string = CRLF.join(["%s:%s" %(k,v) for k in self.headers.items()])
+		header_string = CRLF.join(["%s:%s" %(k,v) for k,v in self.headers.items()])
 		f.write(header_string)
 		f.write(CRLF)
 		f.write(CRLF)
@@ -43,6 +44,29 @@ def handler(client):
 	pprint.pprint(headers)
 	
 	response = Response()
+
+	if method == "GET":
+		response_get(path,f,response)
+
+	elif method == "POST":
+		response_post(path,f,response)
+
+	client.close()
+
+
+def response_get(path,f,response):
+	mesg = """
+	<html>
+		<head><title>python webserver</title></head>
+	<body>
+		<p>Get Method</p>
+	</body>
+	</htm>
+	"""
+	response.data = mesg
+	response.headers['Content-Type'] = "text/html"
+	response.send(f)
+	return 
 
 
 def read_headers(f):
