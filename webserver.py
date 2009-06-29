@@ -1,13 +1,16 @@
-import threading
+import threading,urllib
 import socket,os
 import sys,pprint
 import settings
 from subprocess import call
 
+import cgi,cgitb
+
 CRLF = "\r\n"
 
 
-
+cgitb.enable()
+form = cgi.FieldStorage()
 def start_server(host,port):
 	server = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 	try:
@@ -47,44 +50,54 @@ class Request:
 		response.headers = self.headers
 		return response
 
-	def execCgi(self):
-		writer = WriteObject()
-		sys.stdout = writer
-		scriptPath = getattr(settings,'SCRIPTALIAS')	
-		if '?' in self.path:
-			index = self.path.index('?')
-			args = self.path[index:]
-			file = self.path[1:index]
-			fullCgiPath = os.path.abspath(os.path.join(scriptPath,file))
-			if os.path.exists(fullCgiPath):
-				#code = call([fullCgiPath,args])
-				sys.argv = args
-		else:
-			fullCgiPath = os.path.abspath(os.path.join(scriptPath,self.path[1:]))
-			#data = open(fullCgiPath).read()
-			exec open(fullCgiPath)
-			#code = call([fullCgiPath])
-
-		sys.stdout = sys.__stdout__
-		self.data = "".join(writer.content)
-		print "data : %s" %self.data
-		self.headers['Content-type'] = "text/html"
-
+	
 	def processGetRequest(self):
-		if hasattr(settings,'SCRIPTALIAS'):
+		if not hasattr(settings,'SCRIPTALIAS'):
 			self.execCgi()
 		else:
 			self.data = """
 			<html>
 				<head><title>python webserver</title></head>
 			<body>
-				<p>Get Method</p>
+				<form method="POST" action="index.cgi">
+					<input name='name' type='text'></br>
+					<input type='submit' value='Add'>
+				</form>
 			</body>
 			</htm>
 			"""
 	
 	def processPostRequest(self):
-		pass	
+		if hasattr(settings,'SCRIPTALIAS'):
+			pass
+			#self.execCgi()
+		#self.headers['Content-type'] = "text/html"
+		#self.data = self.path
+
+def execCgi(path,f):
+	scriptPath = getattr(settings,'SCRIPTALIAS')	
+	outfile = open('/tmp/out.txt','w')
+	if '?' in path:
+		index = path.index('?')
+		file = path[1:index]
+		fullCgiPath = os.path.abspath(os.path.join(scriptPath,file))
+		if os.path.exists(fullCgiPath):
+			call([fullCgiPath,path[index+1:]],stdout=outfile)
+	else:
+		fullCgiPath = os.path.abspath(os.path.join(scriptPath,path[1:].strip()))
+		d = dict([(field,form.getvalue(field,'')) for field in form.keys()])
+		args=""
+		print d,fullCgiPath
+		call([fullCgiPath],stdout=outfile)
+	outfile.close()	
+	data = open('/tmp/out.txt').readlines()
+	k,v= data[0].strip().split(":")
+	res = Response()
+	res.headers[k.strip()] = v.strip()
+	res.data = "".join(data[1:])
+	res.send(f)
+	f.close()
+	return 
 
 
 class Response:
@@ -102,6 +115,7 @@ class Response:
 		f.write(CRLF)
 		f.write(CRLF)
 		f.write(self.data)
+		f.close()
 		
 
 class WriteObject:
@@ -112,20 +126,26 @@ class WriteObject:
 
 
 def handler(client):
+	cgitb.enable()
+	form = cgi.FieldStorage()
 	f = client.makefile()
 	method,path,headers = read_headers(f)
+	print method,path
 	pprint.pprint(headers)
-	request = Request(method,path,f)
-	response = request.process()
-	response.send(f)
-	client.close()
-
+	if hasattr(settings,'SCRIPTALIAS'):
+		execCgi(path,f)
+	else:
+		request = Request(method,path,f)
+		response = request.process()
+		response.send(f)
+		client.close()
+	return 
 
 
 def read_headers(f):
 	method,path,version = f.readline().split()
 	headers = {}
-
+	
 	while True:
 		data = f.readline()
 		if data.strip() == "":
@@ -145,7 +165,5 @@ if __name__ == "__main__":
 	else:
 		port = 8080
 
-	writer = WriteObject()
-	sys.stdout = writer
 	start_server('localhost',port)
 	
