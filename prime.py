@@ -1,56 +1,47 @@
-def square(n) : 
-	"""
-	squares the given number
-	>>> square(3)
-	4
-	>>> square(10)
-	100
-	"""
-	return n * n
+import re
+import math
 
-def find_divisor(n, test_divisor):
-	"""
-	finds a divisor for a given number
-	>>> find_divisor(16,2)
-	2
-	>>> find_divisor(27,2)
-	3
-	>>> find_divisor(49,2)
-	7
-	"""
-	if square(test_divisor) > n: return n
-	elif n % test_divisor == 0:return test_divisor
-	else:return find_divisor(n, test_divisor+1)
+def myrange(start=0,n=0):
+	i = start
+	while i < n:
+		yield i
+		i += 1
 
+def main():
+	str_num = raw_input("Enter a num : ")
+	if re.search(".+[024685]$",str_num):
+	#if re.search("(.+[024685]$)|(^1.*[02486]1$)",str_num):
+		print "not prime : ",str_num
+		return 
 
-def smallest_divisor(n): 
-	"""
-	return's smallest divisor of given number
-	>>> smallest_divisor(121)
-	11
-	>>> smallest_divisor(22)
-	2
-	>>> smallest_divisor(25)
-	5
-	"""
-	return find_divisor(n,2)
+	num = long(str_num)
+	for i in myrange(2,long(num**0.5)+1L):
+		if num % i == 0:
+			print "not prime : ",num
+			print "divider : ",i
+			break
+	else:
+		print "prime num : ",num
 
+def isprime(num):
+	
+	if num == 2 or num == 1:
+		return True
 
-def prime(n):
-	"""
-	test's the given number is prime or not
-	>>> prime(3)
-	True
-	>>> prime(4)
-	False
-	>>> prime(103)
-	True
-	"""
-	return n == smallest_divisor(n)
+	if num % 2 == 0:
+		return False
+
+	for i in myrange(3,math.sqrt(num)+1L):
+		rem = num % i
+		if rem != 1 and isprime(rem):
+			return True
+		elif rem == 0:
+			return False
+	else:
+		return False
 
 
 if __name__ == "__main__":
-	import doctest
-	doctest.testmod()
-	#print prime(input("ENTER A NUMBER : "))
-	
+	#main()
+	import sys
+	print isprime(long(sys.argv[1]))
