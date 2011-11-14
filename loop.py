@@ -1,6 +1,7 @@
 
 def remove_all(list):
 	"""
+	for loop purly works on object index
 	is this function returns empty list?
 	"""
 	for item in list:
